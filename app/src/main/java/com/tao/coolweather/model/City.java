@@ -1,12 +1,25 @@
 package com.tao.coolweather.model;
 
+import com.google.gson.annotations.SerializedName;
+
 import org.litepal.crud.DataSupport;
 
 /**
  * Created by tao on 17-9-7.
  */
 
-public class City extends DataSupport {
+public class City extends DataSupport implements Area {
+
+    private transient int id;
+
+    @SerializedName("id")
+    private int areaId;
+
+    @SerializedName("name")
+    private String areaName;
+
+    private int provinceId;
+
     public int getId() {
         return id;
     }
@@ -15,12 +28,20 @@ public class City extends DataSupport {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public int getAreaId() {
+        return areaId;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setAreaId(int areaId) {
+        this.areaId = areaId;
+    }
+
+    public String getAreaName() {
+        return areaName;
+    }
+
+    public void setAreaName(String areaName) {
+        this.areaName = areaName;
     }
 
     public int getProvinceId() {
@@ -30,10 +51,4 @@ public class City extends DataSupport {
     public void setProvinceId(int provinceId) {
         this.provinceId = provinceId;
     }
-
-    private int id;
-
-    private String name;
-
-    private int provinceId;
 }

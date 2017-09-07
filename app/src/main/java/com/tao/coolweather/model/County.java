@@ -8,11 +8,15 @@ import org.litepal.crud.DataSupport;
  * Created by tao on 17-9-7.
  */
 
-public class County extends DataSupport {
+public class County extends DataSupport implements Area {
 
-    private int id;
+    private transient int id;
 
-    private String name;
+    @SerializedName("id")
+    private int areaId;
+
+    @SerializedName("name")
+    private String areaName;
 
     @SerializedName("weather_id")
     private String weatherId;
@@ -27,12 +31,20 @@ public class County extends DataSupport {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public int getAreaId() {
+        return areaId;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setAreaId(int areaId) {
+        this.areaId = areaId;
+    }
+
+    public String getAreaName() {
+        return areaName;
+    }
+
+    public void setAreaName(String areaName) {
+        this.areaName = areaName;
     }
 
     public String getWeatherId() {
