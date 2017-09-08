@@ -87,15 +87,14 @@ public class WeatherActivity extends AppCompatActivity {
 
     private void requestWeatherIfNeeded() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String cachedWeather = prefs.getString(WEATHER_NAME, null);
-        String weatherId = getIntent().getStringExtra("weather_id");
-        Weather weather = handleWeatherResponse(cachedWeather);
+        String weatherString = prefs.getString(WEATHER_NAME, null);
+        Weather cachedWeather = handleWeatherResponse(weatherString);
         boolean needRefresh = true;
 
-        if (weather != null && weatherId.equals(weather.basic.weatherId)) {
+        if (cachedWeather != null) {
             SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_PATTERN);
             try {
-                long last = dateFormat.parse(weather.basic.update.updateTime).getTime();
+                long last = dateFormat.parse(cachedWeather.basic.update.updateTime).getTime();
                 long current = System.currentTimeMillis();
                 if (current - last < REFRESH_INTERVAL) {
                     needRefresh = false;
@@ -107,9 +106,10 @@ public class WeatherActivity extends AppCompatActivity {
 
         if (needRefresh) {
             weatherLayout.setVisibility(View.INVISIBLE);
+            String weatherId = getIntent().getStringExtra("weather_id");
             requestWeather(weatherId);
         } else {
-            showWeatherInfo(weather);
+            showWeatherInfo(cachedWeather);
         }
     }
 
