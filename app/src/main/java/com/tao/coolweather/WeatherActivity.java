@@ -28,6 +28,7 @@ import com.tao.coolweather.util.HttpUtil;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -144,7 +145,7 @@ public class WeatherActivity extends AppCompatActivity {
 
         if (cachedWeather != null) {
             weatherId = cachedWeather.basic.weatherId;
-            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_PATTERN);
+            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_PATTERN, Locale.getDefault());
             try {
                 long last = dateFormat.parse(cachedWeather.basic.update.updateTime).getTime();
                 long current = System.currentTimeMillis();
@@ -207,7 +208,8 @@ public class WeatherActivity extends AppCompatActivity {
     public void showWeatherInfo(Weather weather) {
         titleCity.setText(weather.basic.cityName);
         titleUpdateTime.setText(weather.basic.update.updateTime.split(" ")[1]);
-        degreeText.setText(weather.now.temperature + "℃");
+        String degree = weather.now.temperature + "℃";
+        degreeText.setText(degree);
         weatherInfoText.setText(weather.now.more.info);
 
         forecastLayout.removeAllViews();
@@ -229,9 +231,13 @@ public class WeatherActivity extends AppCompatActivity {
             pm25Text.setText(weather.aqi.city.pm25);
         }
 
-        comfortText.setText("舒适度：" + weather.suggestion.comfort.info);
-        carWashText.setText("洗车指数：" + weather.suggestion.carWash.info);
-        sportText.setText("运动建议：" + weather.suggestion.sport.info);
+        String comfort = "舒适度：" + weather.suggestion.comfort.info;
+        String carWash = "洗车指数：" + weather.suggestion.carWash.info;
+        String sport = "运动建议：" + weather.suggestion.sport.info;
+
+        comfortText.setText(comfort);
+        carWashText.setText(carWash);
+        sportText.setText(sport);
         weatherLayout.setVisibility(View.VISIBLE);
     }
 
