@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -49,6 +50,8 @@ public class WeatherActivity extends AppCompatActivity {
 
     private static final long PIC_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 1 day
 
+    private SwipeRefreshLayout swipeRefresh;
+
     private ScrollView weatherLayout;
 
     private TextView titleCity;
@@ -73,6 +76,8 @@ public class WeatherActivity extends AppCompatActivity {
 
     private ImageView bingImage;
 
+    private String weatherId;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,6 +89,7 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void initializeControls() {
+        swipeRefresh = findViewById(R.id.swipe_refresh);
         weatherLayout = findViewById(R.id.weather_layout);
         titleCity = findViewById(R.id.title_city);
         titleUpdateTime = findViewById(R.id.title_update_time);
@@ -103,12 +109,19 @@ public class WeatherActivity extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
             getWindow().setStatusBarColor(Color.TRANSPARENT);
         }
+
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(weatherId);
+            }
+        });
     }
 
     private void loadWeather() {
         String weatherString = getSharedPrefs().getString(WEATHER_NAME, null);
         Weather cachedWeather = handleWeatherResponse(weatherString);
-        String weatherId = null;
         boolean needRefresh = true;
 
         if (cachedWeather != null) {
@@ -153,6 +166,7 @@ public class WeatherActivity extends AppCompatActivity {
                         } else {
                             showErrorMessage();
                         }
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
@@ -164,6 +178,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         showErrorMessage();
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
