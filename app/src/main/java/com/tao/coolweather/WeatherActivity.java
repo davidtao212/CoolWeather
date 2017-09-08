@@ -1,6 +1,8 @@
 package com.tao.coolweather;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -77,8 +79,8 @@ public class WeatherActivity extends AppCompatActivity {
         setContentView(R.layout.activity_weather);
         initializeControls();
 
-        loadWeatherInfo(false);
-        loadBingPic(false);
+        loadWeather();
+        loadBingPic();
     }
 
     private void initializeControls() {
@@ -94,9 +96,16 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText = findViewById(R.id.car_wash_text);
         sportText = findViewById(R.id.sport_text);
         bingImage = findViewById(R.id.bing_image);
+
+        if (Build.VERSION.SDK_INT >= 21) {
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+        }
     }
 
-    private void loadWeatherInfo(boolean forceUpdate) {
+    private void loadWeather() {
         String weatherString = getSharedPrefs().getString(WEATHER_NAME, null);
         Weather cachedWeather = handleWeatherResponse(weatherString);
         String weatherId = null;
@@ -118,7 +127,7 @@ public class WeatherActivity extends AppCompatActivity {
             weatherId = getIntent().getStringExtra("weather_id");
         }
 
-        if (needRefresh || forceUpdate) {
+        if (needRefresh) {
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
         } else {
@@ -131,7 +140,7 @@ public class WeatherActivity extends AppCompatActivity {
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                final String body = response.body().string();
+                String body = response.body().string();
                 Weather weather = handleWeatherResponse(body);
                 boolean success = weather != null && "ok".equals(weather.status);
 
@@ -211,12 +220,12 @@ public class WeatherActivity extends AppCompatActivity {
         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
     }
 
-    private void loadBingPic(boolean forceUpdate) {
+    private void loadBingPic() {
         String picUrl = getSharedPrefs().getString("bing_pic", null);
         long last = getSharedPrefs().getLong("bing_pic_date", 0);
         long current = System.currentTimeMillis();
 
-        if (picUrl == null || current - last > PIC_REFRESH_INTERVAL || forceUpdate) {
+        if (picUrl == null || current - last > PIC_REFRESH_INTERVAL) {
             requestBingPic();
         } else {
             Glide.with(this).load(picUrl).into(bingImage);
