@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--font size-->
+    <dimen name="font_small">16sp</dimen>
+    <dimen name="font_normal">20sp</dimen>
+    <dimen name="font_large">40sp</dimen>
+    <dimen name="font_extra_large">60sp</dimen>
+
+    <!--margin-->
+    <dimen name="margin_small">10dp</dimen>
+    <dimen name="margin_normal">15dp</dimen>
+
+</resources>
