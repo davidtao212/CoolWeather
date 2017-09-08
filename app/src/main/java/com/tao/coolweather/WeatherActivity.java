@@ -1,5 +1,6 @@
 package com.tao.coolweather;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -9,7 +10,6 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -20,13 +20,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.google.gson.Gson;
 import com.tao.coolweather.model.weather.Forecast;
 import com.tao.coolweather.model.weather.Weather;
+import com.tao.coolweather.service.AutoUpdateService;
 import com.tao.coolweather.util.HttpUtil;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -40,18 +37,18 @@ public class WeatherActivity extends AppCompatActivity {
 
     public static final String END_POINT = "https://free-api.heweather.com/v5/";
 
-//    private static final String MY_KEY = "eb9bb243993047f6aea266910fa23275";
-    private static final String KEY = "bc0418b57b2d4918819d3974ac1285d9";
+    public static final String PIC_END_POINT = "http://guolin.tech/api/bing_pic";
 
-    public static final String WEATHER_NAME = "HeWeather5";
+//    public static final String MY_KEY = "eb9bb243993047f6aea266910fa23275";
+    public static final String API_KEY = "bc0418b57b2d4918819d3974ac1285d9";
+
+    public static final String PREFS_KEY = "weather";
 
     private static final String DATE_PATTERN = "yyyy-MM-dd HH:mm";
 
-    private static final long REFRESH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+    private static final long WEATHER_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
-    private static final String PIC_END_POINT = "http://guolin.tech/api/bing_pic";
-
-    private static final long PIC_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 1 day
+    private static final long PIC_TTL = 24 * 60 * 60 * 1000; // 1 day
 
     private DrawerLayout drawerLayout;
 
@@ -91,6 +88,8 @@ public class WeatherActivity extends AppCompatActivity {
 
         loadWeather();
         loadBingPic();
+
+        startService(new Intent(this, AutoUpdateService.class));
     }
 
     private void initializeControls() {
@@ -139,8 +138,8 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     public void loadWeather() {
-        String weatherString = getSharedPrefs().getString(WEATHER_NAME, null);
-        Weather cachedWeather = handleWeatherResponse(weatherString);
+        String weatherString = getSharedPrefs().getString(PREFS_KEY, null);
+        Weather cachedWeather = HttpUtil.handleWeatherResponse(weatherString);
         boolean needRefresh = true;
 
         if (cachedWeather != null) {
@@ -149,7 +148,7 @@ public class WeatherActivity extends AppCompatActivity {
             try {
                 long last = dateFormat.parse(cachedWeather.basic.update.updateTime).getTime();
                 long current = System.currentTimeMillis();
-                if (current - last < REFRESH_INTERVAL) {
+                if (current - last < WEATHER_TTL) {
                     needRefresh = false;
                 }
             } catch (ParseException e) {
@@ -169,19 +168,19 @@ public class WeatherActivity extends AppCompatActivity {
     public void requestWeather(String weatherId) {
         this.weatherId = weatherId;
         swipeRefresh.setRefreshing(true);
-        String weatherUrl = END_POINT + "weather?city=" + weatherId + "&key=" + KEY;
+        String weatherUrl = END_POINT + "weather?city=" + weatherId + "&key=" + API_KEY;
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String body = response.body().string();
-                Weather weather = handleWeatherResponse(body);
+                Weather weather = HttpUtil.handleWeatherResponse(body);
                 boolean success = weather != null && "ok".equals(weather.status);
 
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (success) {
-                            getSharedPrefsEditor().putString(WEATHER_NAME, body).apply();
+                            getSharedPrefsEditor().putString(PREFS_KEY, body).apply();
                             showWeatherInfo(weather);
                         } else {
                             showErrorMessage();
@@ -203,21 +202,6 @@ public class WeatherActivity extends AppCompatActivity {
                 });
             }
         });
-    }
-
-    private Weather handleWeatherResponse(String response) {
-        if (TextUtils.isEmpty(response)) {
-            return null;
-        }
-        try {
-            JSONObject jsonObject = new JSONObject(response);
-            JSONArray jsonArray = jsonObject.getJSONArray(WEATHER_NAME);
-            String weatherContent = jsonArray.getJSONObject(0).toString();
-            return new Gson().fromJson(weatherContent, Weather.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     public void showWeatherInfo(Weather weather) {
@@ -260,7 +244,7 @@ public class WeatherActivity extends AppCompatActivity {
         long last = getSharedPrefs().getLong("bing_pic_date", 0);
         long current = System.currentTimeMillis();
 
-        if (picUrl == null || current - last > PIC_REFRESH_INTERVAL) {
+        if (picUrl == null || current - last > PIC_TTL) {
             requestBingPic();
         } else {
             Glide.with(this).load(picUrl).into(bingImage);
