@@ -7,11 +7,13 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.tao.coolweather.model.weather.Forecast;
 import com.tao.coolweather.model.weather.Weather;
@@ -41,6 +43,10 @@ public class WeatherActivity extends AppCompatActivity {
 
     private static final long REFRESH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
 
+    private static final String PIC_END_POINT = "http://guolin.tech/api/bing_pic";
+
+    private static final long PIC_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 1 day
+
     private ScrollView weatherLayout;
 
     private TextView titleCity;
@@ -63,12 +69,16 @@ public class WeatherActivity extends AppCompatActivity {
 
     private TextView sportText;
 
+    private ImageView bingImage;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather);
         initializeControls();
-        requestWeatherIfNeeded();
+
+        loadWeatherInfo(false);
+        loadBingPic(false);
     }
 
     private void initializeControls() {
@@ -83,15 +93,17 @@ public class WeatherActivity extends AppCompatActivity {
         comfortText = findViewById(R.id.comfort_text);
         carWashText = findViewById(R.id.car_wash_text);
         sportText = findViewById(R.id.sport_text);
+        bingImage = findViewById(R.id.bing_image);
     }
 
-    private void requestWeatherIfNeeded() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String weatherString = prefs.getString(WEATHER_NAME, null);
+    private void loadWeatherInfo(boolean forceUpdate) {
+        String weatherString = getSharedPrefs().getString(WEATHER_NAME, null);
         Weather cachedWeather = handleWeatherResponse(weatherString);
+        String weatherId = null;
         boolean needRefresh = true;
 
         if (cachedWeather != null) {
+            weatherId = cachedWeather.basic.weatherId;
             SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_PATTERN);
             try {
                 long last = dateFormat.parse(cachedWeather.basic.update.updateTime).getTime();
@@ -102,11 +114,12 @@ public class WeatherActivity extends AppCompatActivity {
             } catch (ParseException e) {
                 e.printStackTrace();
             }
+        } else {
+            weatherId = getIntent().getStringExtra("weather_id");
         }
 
-        if (needRefresh) {
+        if (needRefresh || forceUpdate) {
             weatherLayout.setVisibility(View.INVISIBLE);
-            String weatherId = getIntent().getStringExtra("weather_id");
             requestWeather(weatherId);
         } else {
             showWeatherInfo(cachedWeather);
@@ -121,15 +134,12 @@ public class WeatherActivity extends AppCompatActivity {
                 final String body = response.body().string();
                 Weather weather = handleWeatherResponse(body);
                 boolean success = weather != null && "ok".equals(weather.status);
-                if (success) {
-                    SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
-                    editor.putString(WEATHER_NAME, body);
-                    editor.apply();
-                }
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (success) {
+                            getSharedPrefsEditor().putString(WEATHER_NAME, body).apply();
                             showWeatherInfo(weather);
                         } else {
                             showErrorMessage();
@@ -199,5 +209,48 @@ public class WeatherActivity extends AppCompatActivity {
 
     private void showErrorMessage() {
         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+    }
+
+    private void loadBingPic(boolean forceUpdate) {
+        String picUrl = getSharedPrefs().getString("bing_pic", null);
+        long last = getSharedPrefs().getLong("bing_pic_date", 0);
+        long current = System.currentTimeMillis();
+
+        if (picUrl == null || current - last > PIC_REFRESH_INTERVAL || forceUpdate) {
+            requestBingPic();
+        } else {
+            Glide.with(this).load(picUrl).into(bingImage);
+        }
+    }
+
+    private void requestBingPic() {
+        HttpUtil.sendOkHttpRequest(PIC_END_POINT, new Callback() {
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String picUrl = response.body().string();
+                getSharedPrefsEditor().putString("bing_pic", picUrl)
+                                      .putLong("bing_pic_date", System.currentTimeMillis())
+                                      .apply();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(WeatherActivity.this).load(picUrl).into(bingImage);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private SharedPreferences getSharedPrefs() {
+        return PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this);
+    }
+
+    private SharedPreferences.Editor getSharedPrefsEditor() {
+        return PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
     }
 }
