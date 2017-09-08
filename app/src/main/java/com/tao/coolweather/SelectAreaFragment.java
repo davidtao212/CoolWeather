@@ -21,6 +21,7 @@ import com.tao.coolweather.model.Area;
 import com.tao.coolweather.model.City;
 import com.tao.coolweather.model.County;
 import com.tao.coolweather.model.Province;
+import com.tao.coolweather.model.weather.Weather;
 import com.tao.coolweather.util.HttpUtil;
 
 import org.litepal.crud.DataSupport;
@@ -98,10 +99,16 @@ public class SelectAreaFragment extends Fragment {
                     queryCountiesOf(selectedCity);
                 } else if (currentLevel == LEVEL_COUNTY) {
                     String weatherId = countyList.get(i).getWeatherId();
-                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                    intent.putExtra("weather_id", weatherId);
-                    startActivity(intent);
-                    getActivity().finish();
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.requestWeather(weatherId);
+                        activity.closeDrawers();
+                    }
                 }
             }
         });
