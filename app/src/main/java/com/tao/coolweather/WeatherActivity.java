@@ -167,6 +167,7 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     public void requestWeather(String weatherId) {
+        this.weatherId = weatherId;
         swipeRefresh.setRefreshing(true);
         String weatherUrl = END_POINT + "weather?city=" + weatherId + "&key=" + KEY;
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
